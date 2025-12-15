@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib as plt
 
 # We need to extract:
 # Clump Thickness: column 6
@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 
 #Gestisce il caricamento del dataset
 class Data_Loader():
-    def __init__(self, filepath, features, classes):
+    def __init__(self, filepath, features, classes, rename_map=None):
         self.filepath = filepath
         self.raw_data = None
         self.features_names = features
         self.classes = classes
+        self.rename_map=rename_map
         self.X = None
         self.Y = None
 
@@ -29,6 +30,12 @@ class Data_Loader():
             self.raw_data = pd.read_csv(self.filepath)
             self.raw_data.replace(',', '.', regex = True, inplace = True)
             self.raw_data = self.raw_data.apply(pd.to_numeric, errors='coerce') #trasforma eventuali testi residui in err o NaN
+
+            #Rinomina le colonne con pandas
+            if self.rename_map is not None:
+                self.raw_data.rename(columns=self.rename_map, inplace=True)
+                self.features_names=[self.rename_map.get(f,f) for f in self.features_names]
+
             print ('Il dataset è stato caricato con successo')
             return self.raw_data
         except FileNotFoundError:
@@ -71,7 +78,7 @@ class Data_Loader():
         print(self.Y)
 
 if __name__ == "__main__":
-    # RICORDIAMOCI DI CAMBIARE I NOMI PER FARLI PIU' CARINI
+    #Nomi originali delle colonne nel file csv
     features= ['Blood Pressure',
                'Mitoses',
                'Sample code number',
@@ -86,9 +93,17 @@ if __name__ == "__main__":
                'bareNucleix_wrong']
     selected_features = [features[i] for i in [6, 5, 10, 8, 4, 11, 9, 3, 1]]
 
+    #Rinominazione di colonne
+    rename_map= {
+        'clump_thickness_ty': 'Clump Thickness',
+        'uniformity_cellsize_xx': 'Uniformity of Cell Size',
+        'bareNucleix_wrong': 'Bare Nuclei'
+    }
+
+
     classes = "classtype_v1"
     filepath = 'Dataset_Tumori.csv'
-    loader = Data_Loader(filepath, selected_features, classes)
+    loader = Data_Loader(filepath, selected_features, classes, rename_map)
 
     loader.load_dataset()
     loader.features_cleaning_and_extraction()
