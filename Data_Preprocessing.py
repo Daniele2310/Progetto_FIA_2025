@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import json
+import plotly.express as px
 
 
 class FileConverter:
@@ -54,9 +55,8 @@ class FileConverter:
 
         return csv_path
 
-#Gestione di caricamento del dataset
-class DataLoader:
-
+#Gestisce il caricamento del dataset
+class Data_Loader():
     def __init__(self, filepath, features, classes, rename_map=None):
         # Converte in CSV se necessario
         converter = FileConverter(filepath)
@@ -69,7 +69,7 @@ class DataLoader:
         self.X = None
         self.Y = None
 
-    def load_dataset(self):
+    def load_dataset(self): #stampa del messaggio di successo/insuccesso
         try:
             self.raw_data = pd.read_csv(self.filepath)
             self.raw_data.replace(',', '.', regex=True, inplace=True)
@@ -86,22 +86,26 @@ class DataLoader:
 
     def features_cleaning_and_extraction(self):
         if self.raw_data is None:
-            print('Impossibile pulire dati, il dataset non è stato caricato correttamente')
+            print("Impossibile pulire dati, il dataset non è stato caricato correttamente")
             return
 
         data_copy = self.raw_data.copy()
         print(f"Righe prima della pulizia: {len(data_copy)}")
 
-        data_copy.dropna(subset=[self.classes], inplace=True)
+        data_copy.dropna(subset = [self.classes], inplace = True)
+        data_copy.drop_duplicates(inplace=True)
+
         print(f"Righe dopo la pulizia: {len(data_copy)}")
 
         DataFrame = data_copy[self.features_names].copy()
-        Classi = data_copy[self.classes].copy()
+        Classi = data_copy[[self.classes]].copy() # qui serve la doppia quadra perché così sto creando un dataframe con una sola series
 
+        # Fase di imputazione con media dopo pulizia delle classi
         columns_mean = DataFrame.mean()
-        DataFrame.fillna(columns_mean, inplace=True)
-        DataFrame.drop_duplicates(inplace=True)
+        DataFrame.fillna(columns_mean, inplace = True)
 
+        # Resetta l'indice per averli consecutivi (0, 1, 2, ... 614)
+        # drop=True evita di creare una nuova colonna con i vecchi indici
         DataFrame.reset_index(drop=True, inplace=True)
         Classi.reset_index(drop=True, inplace=True)
 
@@ -112,30 +116,31 @@ class DataLoader:
         print(self.Y)
 
 
+# Da inserire nel main.py
 if __name__ == "__main__":
-    features = ['Blood Pressure',
-                'Mitoses',
-                'Sample code number',
-                'Normal Nucleoli',
-                'Single Epithelial Cell Size',
-                'uniformity_cellsize_xx',
-                'clump_thickness_ty',
-                'Heart Rate',
-                'Marginal Adhesion',
-                'Bland Chromatin',
-                'Uniformity of Cell Shape',
-                'bareNucleix_wrong']
+    features= ['Blood Pressure',
+               'Mitoses',
+               'Sample code number',
+               'Normal Nucleoli',
+               'Single Epithelial Cell Size',
+               'uniformity_cellsize_xx',
+               'clump_thickness_ty',
+               'Heart Rate',
+               'Marginal Adhesion',
+               'Bland Chromatin',
+               'Uniformity of Cell Shape',
+               'bareNucleix_wrong']
     selected_features = [features[i] for i in [6, 5, 10, 8, 4, 11, 9, 3, 1]]
 
-    rename_map = {
-        'clump_thickness_ty': 'Clump Thickness',
-        'uniformity_cellsize_xx': 'Uniformity of Cell Size',
-        'bareNucleix_wrong': 'Bare Nuclei'
-    }
-
     classes = "classtype_v1"
-    filepath = 'Dataset_Tumori.csv'  # Può essere anche .xlsx, .json, .txt, .tsv
+    filepath = 'Dataset_Tumori.csv'
+    loader = Data_Loader(filepath, selected_features, classes)
 
-    loader = DataLoader(filepath, selected_features, classes, rename_map)
     loader.load_dataset()
     loader.features_cleaning_and_extraction()
+
+    fig = px.pie(loader.Y, classes, color_discrete_sequence=['#ffffd4 ', '#fe9929 '],
+                 title='Data Distribution', template='plotly_dark')
+
+    fig.show()
+    # Da qui si evince come il nostro dataset non sia bilanciato: 66% appartiene alla classe 2 e il 33% alla classe 4
