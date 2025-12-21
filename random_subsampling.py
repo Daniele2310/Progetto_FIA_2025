@@ -1,7 +1,6 @@
 from holdout import holdout
 from Data_Preprocessing import Data_Loader
 
-
 def random_subsampling(X, Y, test_size=0.2, n=1, random_state=42):
     # n = numero di ripetizioni
 
