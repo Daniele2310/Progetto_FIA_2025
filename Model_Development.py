@@ -46,3 +46,34 @@ class KNN_Classifier:
 
         return np.array(predictions)
 
+    def predict_proba(self, X_test, pos_label=4):
+        """
+        Calcola la probabilità che i campioni di test appartengano alla classe positiva (pos_label).
+        A differenza di 'predict' che restituisce la classe, questo restituisce un numero tra 0.0 e 1.0
+        """
+        X_test = np.array(X_test)
+        scores = []
+
+        if X_test.ndim == 1:
+            X_test = [X_test]
+
+        for sample in X_test:
+            dists = np.linalg.norm(self.X_train - sample, axis=1)
+
+            # Creo una lista di coppie (distanza, etichetta_reale).
+            # La funzione 'zip' accoppia la distanza calcolata con la vera classe del punto di train.
+            dist_label_pairs = zip(dists, self.Y_train)
+
+            # Ordino le coppie in base alla distanza
+            neighbors = sorted(dist_label_pairs, key=lambda x: x[0])[:self.K]
+
+            labels = [n[1] for n in neighbors]
+
+            # Conto quanti dei vicini appartengono alla classe "Positiva" (4 - Maligno)
+            positive_votes = labels.count(pos_label)
+
+            # La probabilità è data dalla frequenza relativa
+            scores.append(positive_votes / self.K)
+
+        # Restituisco un array di probabilità
+        return np.array(scores)
