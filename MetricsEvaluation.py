@@ -1,13 +1,29 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+from holdout import holdout
+from random_subsampling import random_subsampling
 
 
 class MetricsEvaluator:
-    def __init__(self, y_true, y_pred, y_scores=None):
-        self.y_true = np.array(y_true)
-        self.y_pred = np.array(y_pred)
-        self.y_scores = np.array(y_scores) if y_scores is not None else None
+    def __init__(self, Y_true, Y_pred, Y_scores=None):
+
+        # Convertiamo in array numpy, gestendo anche pandas Series.
+        # Holdout restituisce pandas Series (usando .iloc[]),
+        # mentre le operazioni di calcolo delle metriche richiedono numpy array.
+        
+        # .values è un attributo di pandas Series che restituisce i dati come numpy array.
+        # hasattr() controlla se l'oggetto ha quell'attributo (cioè se è un pandas Series).
+        if hasattr(Y_true, 'values'):
+            self.Y_true = Y_true.values
+        else:
+            self.Y_true = np.array(Y_true)
+            
+        if hasattr(Y_pred, 'values'):
+            self.Y_pred = Y_pred.values
+        else:
+            self.Y_pred = np.array(Y_pred)
+            
+        self.Y_scores = np.array(Y_scores) if Y_scores is not None else None
 
         # Definiamo le classi
         self.pos_label = 4
@@ -18,12 +34,12 @@ class MetricsEvaluator:
 
     def get_metrics(self):
         """Calcola True Positive, True Negative, False Positive, False Negative"""
-        self.tp = np.sum((self.y_true == self.pos_label) & (self.y_pred == self.pos_label))
-        self.tn = np.sum((self.y_true == self.neg_label) & (self.y_pred == self.neg_label))
-        self.fp = np.sum((self.y_true == self.neg_label) & (self.y_pred == self.pos_label))
-        self.fn = np.sum((self.y_true == self.pos_label) & (self.y_pred == self.neg_label))
+        self.tp = np.sum((self.Y_true == self.pos_label) & (self.Y_pred == self.pos_label))
+        self.tn = np.sum((self.Y_true == self.neg_label) & (self.Y_pred == self.neg_label))
+        self.fp = np.sum((self.Y_true == self.neg_label) & (self.Y_pred == self.pos_label))
+        self.fn = np.sum((self.Y_true == self.pos_label) & (self.Y_pred == self.neg_label))
 
-        accuracy = (self.tp + self.tn) / len(self.y_true) if len(self.y_true) > 0 else 0
+        accuracy = (self.tp + self.tn) / len(self.Y_true) if len(self.Y_true) > 0 else 0
         error_rate = 1 - accuracy
 
         sensitivity = self.tp / (self.tp + self.fn) if (self.tp + self.fn) > 0 else 0
@@ -40,9 +56,7 @@ class MetricsEvaluator:
 
     def plot_confusion_matrix(self):
         """Plotta la matrice di confusione"""
-        # Assicuriamoci che i conteggi siano aggiornati
         self.get_metrics()
-
 
         matrix_data = [
             [self.tn, self.fp],
@@ -51,20 +65,16 @@ class MetricsEvaluator:
 
         fig, ax = plt.subplots(figsize=(6, 5))
 
-        # Creiamo la visualizzazione a griglia
         for i in range(2):
             for j in range(2):
                 val = matrix_data[i][j]
-                # Disegna un box bianco con bordo nero per ogni cella
                 ax.text(j, i, str(val), va='center', ha='center', fontsize=18, fontweight='bold',
                         bbox=dict(facecolor='white', edgecolor='black', boxstyle='square,pad=2.5'))
 
-        # Configurazione assi
         ax.set_xticks([0, 1])
         ax.set_yticks([0, 1])
         ax.set_xticklabels(['Predetto 2 (Neg)', 'Predetto 4 (Pos)'], fontsize=11)
         ax.set_yticklabels(['Reale 2 (Neg)', 'Reale 4 (Pos)'], fontsize=11)
-
 
         ax.set_ylim(1.5, -0.5)
         ax.set_xlim(-0.5, 1.5)
@@ -73,7 +83,6 @@ class MetricsEvaluator:
         plt.ylabel('Classe Effettiva', fontsize=12)
         plt.xlabel('Classe Predetta', fontsize=12)
 
-        # Rimuove la griglia e i bordi del grafico di sfondo
         ax.grid(False)
         for spine in ax.spines.values():
             spine.set_visible(False)
