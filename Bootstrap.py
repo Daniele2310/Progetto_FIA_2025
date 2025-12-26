@@ -10,6 +10,7 @@ def bootstrap(X, Y, k, random_state):
         current_seed = random_state + i
         np.random.seed(current_seed)
         train_indices = np.random.choice(n_samples, size=n_samples, replace=True)
+        np.random.shuffle(train_indices)
         X_train = X[train_indices]
         Y_train = Y[train_indices]
 
@@ -17,7 +18,7 @@ def bootstrap(X, Y, k, random_state):
         X_test = X[test_indices]
         Y_test = Y[test_indices]
 
-        dataset_split.append([X_train, Y_train, X_test, Y_test])
+        dataset_split.append([X_train, X_test, Y_train, Y_test])
 
     if len(dataset_split[0][2]) / n_samples < 0.30:
         print("ATTENZIONE: stai utilizzando un test test_set troppo basso")
