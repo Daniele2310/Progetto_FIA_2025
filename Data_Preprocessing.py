@@ -92,17 +92,26 @@ class Data_Loader():
         data_copy = self.raw_data.copy()
         print(f"Righe prima della pulizia: {len(data_copy)}")
 
+        for col in self.features_names:
+            if col in data_copy.columns:
+                data_copy.loc[data_copy[col] > 10, col] = np.nan
+        # In questo modo sostituisco i valori > 10 con Nan
+
+        nans_per_raw = data_copy.isnull().sum(axis=1) # axis=1 poichè cosi faccio il check sulle righe
+        data_copy = data_copy[nans_per_raw <= 5]
+        # In questo modo tengo le row in cui ho meno di 5 valori Nan o null
+
         data_copy.dropna(subset = [self.classes], inplace = True)
-        data_copy.drop_duplicates(inplace=True)
+        data_copy.drop_duplicates(inplace=True) #bisogna capire se eliminare il sample code number per far funzionare questa riga
 
         print(f"Righe dopo la pulizia: {len(data_copy)}")
 
         DataFrame = data_copy[self.features_names].copy()
         Classi = data_copy[[self.classes]].copy() # qui serve la doppia quadra perché così sto creando un dataframe con una sola series
 
-        # Fase di imputazione con media dopo pulizia delle classi
-        columns_mean = DataFrame.mean()
-        DataFrame.fillna(columns_mean, inplace = True)
+        # Fase di imputazione con mediana dopo pulizia delle classi
+        columns_median = DataFrame.median()
+        DataFrame.fillna(columns_median, inplace = True)
 
         # Resetta l'indice per averli consecutivi (0, 1, 2, ... 614)
         # drop=True evita di creare una nuova colonna con i vecchi indici
