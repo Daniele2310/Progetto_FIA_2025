@@ -55,12 +55,15 @@ class MetricsEvaluator:
         specificity = self.tn / (self.tn + self.fp) if (self.tn + self.fp) > 0 else 0
         g_mean = np.sqrt(sensitivity * specificity)
 
+
+        #Utilizziamo float() per migliorare la visualizzazione a schermo e round()
+        # per limitare le cifre decimali
         return {
-            "Accuracy": accuracy,
-            "Error Rate": error_rate,
-            "Sensitivity": sensitivity,
-            "Specificity": specificity,
-            "Geometric Mean": g_mean
+            "Accuracy": round(float(accuracy * 100), 2),
+            "Error Rate": round(float(error_rate * 100), 2),
+            "Sensitivity": round(float(sensitivity * 100), 2),
+            "Specificity": round(float(specificity * 100), 2),
+            "Geometric Mean": round(float(g_mean * 100), 2)
         }
 
     def plot_confusion_matrix(self):
