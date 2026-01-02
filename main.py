@@ -90,7 +90,20 @@ def main():
     print("----------------------\n")
 
     classes = "classtype_v1"
-    loader = Data_Loader(args.file, [], classes)
+
+    features = [
+        'Clump Thickness',
+        'Uniformity of Cell Size',
+        'Uniformity of Cell Shape',
+        'Marginal Adhesion',
+        'Single Epithelial Cell Size',
+        'Bare Nuclei',
+        'Bland Chromatin',
+        'Normal Nucleoli',
+        'Mitoses'
+    ]
+
+    loader = Data_Loader(args.file, features, classes)
     df = loader.load_dataset()
     print(df)
 
