@@ -160,7 +160,8 @@ def main():
         metrics = evaluator.get_metrics()
         all_metrics.append(metrics) #salva le metriche ad ogni split
         print(metrics)
-        evaluator.plot_confusion_matrix()
+        evaluator.plot_confusion_matrix() #grafico della matrice di confusione
+        evaluator.plot_roc_curve()        #grafico della ROC e AUC 
 
     if all_metrics:
         print("\n--- Media Prestazioni su tutti gli esperimenti ---")

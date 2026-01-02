@@ -149,6 +149,7 @@ class MetricsEvaluator:
 
         plt.figure(figsize=(6, 5))
         plt.plot(fpr_list, tpr_list, color='darkorange', lw=2, label=f'ROC curve (AUC = {auc:.3f})')
+        plt.fill_between(fpr_list, tpr_list, color='darkorange', alpha=0.2)
         plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
