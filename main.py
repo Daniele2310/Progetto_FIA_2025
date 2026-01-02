@@ -91,7 +91,7 @@ def main():
 
     classes = "classtype_v1"
 
-    features = [
+    selected_features = [
         'Clump Thickness',
         'Uniformity of Cell Size',
         'Uniformity of Cell Shape',
@@ -103,7 +103,7 @@ def main():
         'Mitoses'
     ]
 
-    loader = Data_Loader(args.file, features, classes)
+    loader = Data_Loader(args.file, selected_features, classes)
     df = loader.load_dataset()
     print(df)
 
@@ -114,7 +114,9 @@ def main():
     if classes in columns:
         columns.remove(classes)
 
-    loader.features_names = columns
+    features = [col for col in columns if col in selected_features]
+
+    loader.features_names = features
 
     loader.features_cleaning_and_extraction()
     X = loader.X
