@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
+import os
 
 from Data_Preprocessing import Data_Loader
 from Data_Preprocessing import FileConverter
@@ -45,6 +46,7 @@ class BootstrapStrategy(ValidationStrategy):
 class ValidationFactory:
     @staticmethod
     def get_strategy(method_name):
+        method_name = method_name.lower()
         strategies={
             'holdout': HoldoutStrategy(),
             'random_subsampling': RandomSubsamplingStrategy(),
@@ -57,13 +59,13 @@ class ValidationFactory:
         }
 
         if method_name in strategies:
-            return strategies[method_name]
+            return method_name, strategies[method_name]
 
         for canonical_name, names in aliases.items():
             if method_name in names:
-                return strategies[canonical_name]
+                return canonical_name, strategies[canonical_name]
 
-        return None
+        return None,None
 
 
 def parse_args():
@@ -71,7 +73,7 @@ def parse_args():
 
     parser.add_argument("--file", type = str,  default = "Dataset_Tumori.csv" )
 
-    parser.add_argument("--method", type = str, choices = ['holdout', 'subsampling', 'bootstrap'], default="holdout",
+    parser.add_argument("--method", type = str, default="holdout",
                         help = "Metodo di validazione: 'holdout', 'subsampling', 'bootstrap'")
 
     parser.add_argument("--test_size", type = float, default = 0.2, help = "Percentuale del test set usato per holdout e subsampling")
@@ -120,6 +122,7 @@ def main():
 
     if df is None:
         print("Errore: Impossibile caricare il dataset")
+        return
 
     columns = df.columns.tolist()
     if classes in columns:
@@ -139,11 +142,11 @@ def main():
     splits = []
 
     #Ottiene la strategia tramite Factory
-    strategy=ValidationFactory.get_strategy(args.method)
+    method_name, strategy=ValidationFactory.get_strategy(args.method)
 
     if strategy is None:
         print (f"Errore: Metodo di validazione {args.method} non supportato.")
-
+        return
     splits= strategy.validate(X, Y, args)
 
     knn = KNN_Classifier(K = args.k_nn)
@@ -165,6 +168,25 @@ def main():
         print(df_metrics.mean())
 
 
+
+    #i risultati del validation vengono riportati in un file excel all'interno di una cartella
+    if all_metrics:
+        results_dir = "results"
+        method_dir = os.path.join(results_dir, method_name)
+
+        # crea cartelle se non esistono
+        os.makedirs(method_dir, exist_ok=True)
+
+        df_metrics = pd.DataFrame(all_metrics)
+
+        excel_path = os.path.join(
+            method_dir,
+            f"metrics_{args.method}.xlsx"
+        )
+
+        df_metrics.to_excel(excel_path, index=False)
+
+        print(f"\nMetriche salvate in: {excel_path}")
 
 
 
