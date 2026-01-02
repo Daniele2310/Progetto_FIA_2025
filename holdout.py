@@ -1,8 +1,13 @@
 import numpy as np
+import pandas as pd
 from Data_Preprocessing import Data_Loader
+from typing import Tuple, Optional
 
 
-def holdout(X, Y, test_size=0.4, random_state=42):
+def holdout(X: pd.DataFrame,
+            Y: pd.DataFrame,
+            test_size: float,
+            random_state: int) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
 
     if test_size > 0.35:
         print("ATTENZIONE: stai utilizzando un training set < 65%. Questo potrebbe ridurre la capacità di apprendimento del modello.")
@@ -39,5 +44,8 @@ def holdout(X, Y, test_size=0.4, random_state=42):
     Y_test  = Y.iloc[test_idx]    #selezione delle classi per il test set
 
 
-    return X_train, X_test, Y_train, Y_test    # Restituzione dei risultati
+    return (np.array(X_train),
+            np.array(X_test),
+            np.array(Y_train),
+            np.array(Y_test))    # Restituzione dei risultati
 
