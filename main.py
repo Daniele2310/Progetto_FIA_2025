@@ -43,16 +43,27 @@ class BootstrapStrategy(ValidationStrategy):
 #Implementazione della factory
 
 class ValidationFactory:
-    """Crea l'oggetto strategia corretto"""
     @staticmethod
     def get_strategy(method_name):
         strategies={
             'holdout': HoldoutStrategy(),
-            'subsampling': RandomSubsamplingStrategy(),
+            'random_subsampling': RandomSubsamplingStrategy(),
             'bootstrap': BootstrapStrategy()
         }
-        return strategies.get(method_name)
+        aliases = {
+            'holdout': ['holdout', 'hold'],
+            'random_subsampling': ['random', 'subsampling', 'random_subsampling', 'rs'],
+            'bootstrap': ['bootstrap', 'boot']
+        }
 
+        if method_name in strategies:
+            return strategies[method_name]
+
+        for canonical_name, names in aliases.items():
+            if method_name in names:
+                return strategies[canonical_name]
+
+        return None
 
 
 def parse_args():
