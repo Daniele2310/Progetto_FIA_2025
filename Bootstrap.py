@@ -1,6 +1,11 @@
 import numpy as np
+import pandas as pd
+from typing import List, Optional, Tuple
 
-def bootstrap(X, Y, k, random_state):
+def bootstrap(X: pd.DataFrame,
+              Y: pd.DataFrame,
+              k: int,
+              random_state: int) -> Optional[List[Tuple[np.ndarray]]]:
     X = np.array(X)
     Y = np.array(Y)
     n_samples = X.shape[0]
@@ -18,9 +23,11 @@ def bootstrap(X, Y, k, random_state):
         X_test = X[test_indices]
         Y_test = Y[test_indices]
 
-        dataset_split.append([X_train, X_test, Y_train, Y_test])
+        dataset_split.append((X_train, X_test, Y_train, Y_test))
+        # lo faccio diventare una lista di tuple per renderlo coerente con
+        # l'holdout che restituisce delle tuple
 
-    if len(dataset_split[0][2]) / n_samples < 0.30:
+    if len(dataset_split[0][3]) / n_samples < 0.30:
         print("ATTENZIONE: stai utilizzando un test test_set troppo basso")
         risposta = input("Desideri continuare? (s/n): ").strip().lower()
 
