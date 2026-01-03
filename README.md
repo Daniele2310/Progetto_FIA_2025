@@ -64,11 +64,32 @@ Numero di vicini da considerare per il classificatore k-NN.
 - ROC
 - Area Under the Curve (AUC)
 
+## Come eseguire il codice
+Il programma viene gestito tramite lo script principale `main.py`. È possibile configurare l'esecuzione utilizzando i seguenti argomenti da riga di comando per personalizzare la pipeline di classificazione:
 
+* **Comando base**:
+    ```bash
+    python main.py --method <metodo> --k_nn <valore_k>
+    ```
 
-### Output
-- File Excel con le performance
-- Grafici (Confusion Matrix, ROC Curve, AUC)
+* **Esempi di utilizzo**:
+    * **Holdout**: Per eseguire una singola divisione (es. 20% test set) con k=5:
+        `python main.py --method holdout --test_size 0.2 --k_nn 5`
+    * **Random Subsampling**: Per eseguire 10 iterazioni (K=10) con k=7:
+        `python main.py --method random_subsampling --n_iter 10 --k_nn 7`
+    * **Bootstrap**: Per eseguire la validazione tramite 10 campionamenti bootstrap con k=3:
+        `python main.py --method bootstrap --k_boot 10 --k_nn 3`
+
+## Visualizzazione e Interpretazione dei Risultati
+Al termine dell'elaborazione, il sistema fornisce diversi strumenti per valutare l'efficacia del modello:
+
+### 1. Risultati e Report
+- **Output a video**: Vengono mostrate tutte le metriche calcolate (Accuracy, Sensitivity, ecc.). Se si utilizzano metodi iterativi (Subsampling o Bootstrap), il sistema calcola e mostra la **media delle prestazioni** attraverso tutti i K esperimenti effettuati.
+- **File Excel**: I risultati dettagliati di ogni esperimento vengono salvati automaticamente in un file `.xlsx` nella cartella `results/` per consentire analisi comparative
+
+### 2. Interpretazione Grafica
+- **Confusion Matrix**: mostra la relazione tra le predizioni del modello e le classi reali
+- **Curva ROC e AUC**: visualizza il trade-off tra Sensibilità e Specificità. Il valore **AUC (Area Under the Curve)** fornisce un indice sintetico della capacità discriminante: più il valore è vicino a 1.0, migliore è la capacità del classificatore di distinguere correttamente tra tumori benigni e maligni.
 
 
 ## Autori (gruppo n.6)
