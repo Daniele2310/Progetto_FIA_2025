@@ -89,3 +89,318 @@ class Test_Data_Loader_Cleaning(unittest.TestCase):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from MetricsEvaluation import MetricsEvaluator  # Importazione della classe
+
+
+class Test_Metrics_Evaluation(unittest.TestCase):
+    """
+    Test per verificare la correttezza dei calcoli delle metriche di performance
+    """
+
+    def setUp(self):
+        """
+        Inizializza un caso di test con valori noti:
+        - 2 campioni reali positivi (4) e 2 negativi (2)
+        - Predizioni: 1 True Positive, 2 True Negative, 0 False Positive, 1 False Negative
+        """
+        self.y_true = np.array([4, 4, 2, 2])
+        self.y_pred = np.array([4, 2, 2, 2])
+        # Risultati attesi: Accuratezza 75%, Sensibilità 50%, Specificità 100%
+
+        self.evaluator = MetricsEvaluator(self.y_true, self.y_pred, pos_label=4)
+
+    def test_calcolo_accuratezza(self):
+        """Verifica che l'accuratezza sia (TP+TN)/Totale = 3/4 = 75.0%."""
+        metrics = self.evaluator.get_metrics()
+        self.assertEqual(metrics["Accuracy"], 75.0)
+
+    def test_calcolo_sensibilita(self):
+        """Verifica la sensibilità (Recall): TP/(TP+FN) = 1/2 = 50.0%."""
+        metrics = self.evaluator.get_metrics()
+        self.assertEqual(metrics["Sensitivity"], 50.0)
+
+    def test_calcolo_specificita(self):
+        """Verifica la specificità: TN/(TN+FP) = 2/2 = 100.0%."""
+        metrics = self.evaluator.get_metrics()
+        self.assertEqual(metrics["Specificity"], 100.0)
+
+    @patch('matplotlib.pyplot.show')
+    def test_auc_ranking_perfetto(self, mock_show):
+        """
+        Testa il calcolo dell'AUC utilizzando un Mock per isolare Matplotlib.
+        In un caso di ranking perfetto, l'AUC deve essere 1.0.
+        """
+        y_scores = np.array([0.9, 0.8, 0.1, 0.2])
+        eval_auc = MetricsEvaluator(self.y_true, self.y_pred, Y_scores=y_scores, pos_label=4)
+
+        auc = eval_auc.plot_roc_curve()
+
+        # Verifica che il grafico non sia apparso a video e l'AUC sia corretta
+        self.assertTrue(mock_show.called)
+        self.assertEqual(auc, 1.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+
