@@ -5,6 +5,7 @@ import plotly.express as px
 from typing import List, Dict, Optional, Any, Union
 
 
+
 class FileConverter:
     """Gestisce la conversione di file con formato diverso da .csv"""
 
