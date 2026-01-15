@@ -66,4 +66,26 @@ class Test_Data_Loader_Cleaning(unittest.TestCase):
         conteggio_nan = self.X.isnull().sum().sum()
         self.assertEqual(conteggio_nan, 0, f"Errore: Ci sono ancora {conteggio_nan} valori mancanti (NaN).")
 
+    def test_rimozione_colonna_id(self):
+        """
+        Verifica che la colonna ('Sample code number')
+        sia stata rimossa correttamente dal dataset finale X.
+        """
+        colonna_id = 'Sample code number'
+        # La colonna ID non deve essere presente nelle colonne di X
+        self.assertNotIn(colonna_id, self.X.columns,f"Errore: La colonna '{colonna_id}' non è stata rimossa dal dataset.")
+
+        colonne_reali = set(self.X.columns)
+        colonne_attese = set(FEATURES_LIST)
+
+        # Le colonne presenti devono essere quelle specificate in FEATURES_LIST
+        # Controlliamo che le colonne reali siano un sottoinsieme o uguali a quelle attese
+        self.assertTrue(colonne_reali.issubset(colonne_attese),
+                        f"Trovate colonne impreviste: {colonne_reali - colonne_attese}")
+
+
+
+
+
+
 
