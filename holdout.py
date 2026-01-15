@@ -29,10 +29,16 @@ def holdout(X,
     train_idx = indices[:split_point]
     test_idx  = indices[split_point:]
 
-    X_train = X[train_idx]
-    X_test  = X[test_idx]
-    Y_train = Y[train_idx]
-    Y_test  = Y[test_idx]
+    if hasattr(X, "iloc"):  # pandas DataFrame / Series
+        X_train = X.iloc[train_idx]
+        X_test = X.iloc[test_idx]
+        Y_train = Y.iloc[train_idx]
+        Y_test = Y.iloc[test_idx]
+    else:  # numpy array
+        X_train = X[train_idx]
+        X_test = X[test_idx]
+        Y_train = Y[train_idx]
+        Y_test = Y[test_idx]
 
     return (
         np.array(X_train),
