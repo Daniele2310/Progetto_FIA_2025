@@ -113,7 +113,52 @@ class Test_Holdout(unittest.TestCase):
         self.assertEqual(len(X_test), expected_test_size)
 
 
+# ===========TEST RANDOMSUBSAMPLING===========
+class Test_RandomSubsampling(unittest.TestCase):
 
+    def setUp(self):
+        self.X = np.arange(100).reshape(50, 2)
+        self.Y = np.arange(50)
+        self.test_size = 0.3
+        self.n_iter = 5
+        self.seed = 42
+
+    def test_numero_split(self):
+        splits = random_subsampling(
+            self.X, self.Y, self.test_size, self.n_iter, self.seed
+        )
+
+        self.assertEqual(len(splits), self.n_iter)
+
+    def test_split_dimensioni(self):
+        splits = random_subsampling(
+            self.X, self.Y, self.test_size, self.n_iter, self.seed
+        )
+
+        for X_train, X_test, Y_train, Y_test in splits:
+            self.assertEqual(len(X_train) + len(X_test), len(self.X))
+            self.assertEqual(len(Y_train) + len(Y_test), len(self.Y))
+
+
+# ===========TEST BOOTSTRAP===========
+class Test_Bootstrap(unittest.TestCase):
+
+    def setUp(self):
+        self.X = np.arange(100).reshape(50, 2)
+        self.Y = np.arange(50)
+        self.k = 5
+        self.seed = 42
+
+    def test_numero_bootstrap(self):
+        splits = bootstrap(self.X, self.Y, self.k, self.seed)
+        self.assertEqual(len(splits), self.k)
+
+    def test_dimensione_training_set(self):
+        splits = bootstrap(self.X, self.Y, self.k, self.seed)
+
+        for X_train, _, Y_train, _ in splits:
+            self.assertEqual(len(X_train), len(self.X))
+            self.assertEqual(len(Y_train), len(self.Y))
 
 
 
