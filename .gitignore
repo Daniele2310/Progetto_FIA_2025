@@ -1,3 +1,24 @@
-.idea/
+# Ambiente Virtuale
+env/
+venv/
+ENV/
+
+# Directory dei risultati
+results/
+
+# File temporanei di Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Configurazione IDE
+.idea/
+.vscode/
+
+# Dati di test
+data/
+
+# File di sistema 
+.DS_Store
+Thumbs.db
