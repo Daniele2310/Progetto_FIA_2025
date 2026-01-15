@@ -86,50 +86,31 @@ class Test_Data_Loader_Cleaning(unittest.TestCase):
 
 
 
+# ===========TEST HOLDOUT===========
 
+class Test_Holdout(unittest.TestCase):
 
+    def setUp(self):
+        self.X = np.arange(100).reshape(50, 2)
+        self.Y = np.arange(50)
+        self.test_size = 0.2
+        self.seed = 42
 
+    def test_holdout_dimensioni_corrette(self):
+        X_train, X_test, Y_train, Y_test = holdout(
+            self.X, self.Y, self.test_size, self.seed
+        )
 
+        self.assertEqual(len(X_train) + len(X_test), len(self.X))
+        self.assertEqual(len(Y_train) + len(Y_test), len(self.Y))
 
+    def test_holdout_percentuale_test(self):
+        X_train, X_test, _, _ = holdout(
+            self.X, self.Y, self.test_size, self.seed
+        )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        expected_test_size = int(len(self.X) * self.test_size)
+        self.assertEqual(len(X_test), expected_test_size)
 
 
 
@@ -397,6 +378,11 @@ class Test_Metrics_Evaluation(unittest.TestCase):
         # Verifica che il grafico non sia apparso a video e l'AUC sia corretta
         self.assertTrue(mock_show.called)
         self.assertEqual(auc, 1.0)
+
+
+
+
+
 
 
 if __name__ == "__main__":
