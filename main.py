@@ -1,4 +1,6 @@
 import argparse
+from unittest import case
+
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
@@ -46,7 +48,17 @@ class BootstrapStrategy(ValidationStrategy):
 class ValidationFactory:
     @staticmethod
     def get_strategy(method_name):
-        method_name = method_name.lower()
+        # method_name = method_name.lower()
+        match method_name:
+            case "holdout":
+                return HoldoutStrategy()
+            case "random_subsampling":
+                return RandomSubsamplingStrategy()
+            case "bootstrap":
+                return BootstrapStrategy()
+
+        # strategy = method_name
+        """
         strategies={
             'holdout': HoldoutStrategy(),
             'random_subsampling': RandomSubsamplingStrategy(),
@@ -66,7 +78,7 @@ class ValidationFactory:
                 return canonical_name, strategies[canonical_name]
 
         return None,None
-
+         """
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Classificazione con KNN")
@@ -142,13 +154,43 @@ def main():
     splits = []
 
     #Ottiene la strategia tramite Factory
-    method_name, strategy=ValidationFactory.get_strategy(args.method)
+     # method_name, strategy=ValidationFactory.get_strategy(args.method)
+    while True:
+        print("MENU PRINCIPALE")
+        print("1. Esegui Holdout")
+        print("2. Esegui Random Subsampling")
+        print("3. Esegui Bootstrap")
+        print("4. Non eseguire nulla")
 
+        try:
+            scelta = int(input("Inserisci la scelta (1-4): "))
+        except ValueError:
+            print("Inserire una scelta valida")
+            continue
+
+        if scelta == 1:
+            method_name = "holdout"
+            strategy = ValidationFactory.get_strategy(method_name)
+            splits = strategy.validate(X, Y, args)
+        elif scelta == 2:
+            method_name = "random_subsampling"
+            strategy = ValidationFactory.get_strategy(method_name)
+            splits = strategy.validate(X, Y, args)
+        elif scelta == 3:
+            method_name = "bootstrap"
+            strategy = ValidationFactory.get_strategy(method_name)
+            splits = strategy.validate(X, Y, args)
+        elif scelta == 4:
+            print("Non sto eseguendo nulla")
+            break
+        break
+    """
     if strategy is None:
         print (f"Errore: Metodo di validazione {args.method} non supportato.")
         return
-    splits= strategy.validate(X, Y, args)
+    """
 
+   # splits = strategy.validate(X, Y, args)
     knn = KNN_Classifier(K = args.k_nn)
     all_metrics = []
     for i, (X_train, X_test, Y_train, Y_test) in enumerate(splits):
