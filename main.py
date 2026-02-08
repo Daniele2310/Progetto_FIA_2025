@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
 import os
+from datetime import datetime
 
 from Data_Preprocessing import Data_Loader
 from Data_Preprocessing import FileConverter
@@ -15,14 +16,15 @@ from Model_Development import KNN_Classifier
 from MetricsEvaluation import MetricsEvaluator
 
 
-
 '''
 1. file converter
 2. data loader -> dataset pulito come file.csv
 3. KNN
 4. validation (su richiesta holdout, random subsampling o bootstrap)
-5. Per ogni validation, metriche (scelte dall'utente) salvate su file Excel e plot della CM e ROC+AUC
+5. Per ogni validation, metriche salvate su file Excel + plot CM e ROC
 '''
+
+# ===================== VALIDATION STRATEGY =====================
 
 class ValidationStrategy(ABC):
     """Intefaccia comune per i metodi di validazione"""
@@ -80,6 +82,9 @@ class ValidationFactory:
         return None,None
          """
 
+
+# ===================== ARGPARSE =====================
+
 def parse_args():
     parser = argparse.ArgumentParser(description = "Classificazione con KNN")
 
@@ -103,6 +108,9 @@ def parse_args():
                         help="Seed casuale per la riproducibilità")
 
     return parser.parse_args()
+
+
+# ===================== MAIN =====================
 
 def main():
     args = parse_args()
@@ -130,18 +138,17 @@ def main():
 
     loader = Data_Loader(args.file, selected_features, classes)
     df = loader.load_dataset()
-    print(df)
 
     if df is None:
         print("Errore: Impossibile caricare il dataset")
         return
 
+    # selezione feature realmente presenti
     columns = df.columns.tolist()
     if classes in columns:
         columns.remove(classes)
 
-    features = [col for col in columns if col in selected_features]
-
+    features = [f for f in selected_features if f in columns]
     loader.features_names = features
 
     loader.features_cleaning_and_extraction()
@@ -149,12 +156,11 @@ def main():
     Y = loader.Y
 
     if isinstance(Y, pd.DataFrame):
-        Y = Y.iloc[:,0]
+        Y = Y.iloc[:, 0]
 
     splits = []
-
-    #Ottiene la strategia tramite Factory
-     # method_name, strategy=ValidationFactory.get_strategy(args.method)
+    # Ottiene la strategia tramite Factory
+    # method_name, strategy=ValidationFactory.get_strategy(args.method)
     while True:
         print("MENU PRINCIPALE")
         print("1. Esegui Holdout")
@@ -190,47 +196,94 @@ def main():
         return
     """
 
-   # splits = strategy.validate(X, Y, args)
+    # splits = strategy.validate(X, Y, args)
     knn = KNN_Classifier(K = args.k_nn)
     all_metrics = []
+
     for i, (X_train, X_test, Y_train, Y_test) in enumerate(splits):
         knn.fit(X_train, Y_train)
         y_pred = knn.predict(X_test)
         y_proba = knn.predict_proba(X_test)
 
-        evaluator = MetricsEvaluator(Y_test, y_pred, Y_scores=y_proba, pos_label=4)
+        evaluator = MetricsEvaluator(
+            Y_test, y_pred,
+            Y_scores=y_proba,
+            pos_label=4
+        )
+
         metrics = evaluator.get_metrics()
-        all_metrics.append(metrics) #salva le metriche ad ogni split
+
+        # === TIMESTAMP PER OGNI ESPERIMENTO ===
+        metrics_with_time = metrics.copy()
+        metrics_with_time["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        all_metrics.append(metrics_with_time)
+
         print(metrics)
-        evaluator.plot_confusion_matrix() #grafico della matrice di confusione
-        evaluator.plot_roc_curve()        #grafico della ROC e AUC 
+        evaluator.plot_confusion_matrix()
+        evaluator.plot_roc_curve()
 
-    if all_metrics:
-        print("\n--- Media Prestazioni su tutti gli esperimenti ---")
-        df_metrics=pd.DataFrame(all_metrics)
-        print(df_metrics.mean())
+    # ===================== EXCEL =====================
 
-
-
-    #i risultati del validation vengono riportati in un file excel all'interno di una cartella
     if all_metrics:
         results_dir = "results"
         method_dir = os.path.join(results_dir, method_name)
-
-        # crea cartelle se non esistono
         os.makedirs(method_dir, exist_ok=True)
 
-        df_metrics = pd.DataFrame(all_metrics)
+        df_metrics = pd.DataFrame(all_metrics).round(2)
+
+        # numero esperimento
+        df_metrics.insert(0, "Esperimento", range(1, len(df_metrics) + 1))
+
+        # ordine colonne: Esperimento, Timestamp, metriche
+        cols = ["Esperimento", "Timestamp"] + [
+            c for c in df_metrics.columns if c not in ["Esperimento", "Timestamp"]
+        ]
+        df_metrics = df_metrics[cols]
+
+        # riassunto
+        summary = pd.DataFrame({
+            "Media": df_metrics.drop(columns=["Esperimento", "Timestamp"]).mean(),
+            "Deviazione Std": df_metrics.drop(columns=["Esperimento", "Timestamp"]).std()
+        }).round(2)
 
         excel_path = os.path.join(
             method_dir,
             f"metrics_{args.method}.xlsx"
         )
 
-        df_metrics.to_excel(excel_path, index=False)
+        with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+            df_metrics.to_excel(writer, sheet_name="Risultati", index=False)
+            summary.to_excel(writer, sheet_name="Riassunto")
+
+            workbook = writer.book
+            ws_r = writer.sheets["Risultati"]
+            ws_s = writer.sheets["Riassunto"]
+
+            header_format = workbook.add_format({
+                'bold': True,
+                'align': 'center',
+                'valign': 'middle',
+                'border': 1,
+                'bg_color': '#D9E1F2'
+            })
+
+            cell_format = workbook.add_format({
+                'align': 'center',
+                'border': 1
+            })
+
+            for col, name in enumerate(df_metrics.columns):
+                ws_r.write(0, col, name, header_format)
+                ws_r.set_column(col, col, 18, cell_format)
+
+            ws_s.write(0, 0, "", header_format)
+            ws_s.write(0, 1, "Media", header_format)
+            ws_s.write(0, 2, "Deviazione Std", header_format)
+            ws_s.set_column(0, 0, 22, cell_format)
+            ws_s.set_column(1, 2, 18, cell_format)
 
         print(f"\nMetriche salvate in: {excel_path}")
-
 
 
 if __name__ == "__main__":
