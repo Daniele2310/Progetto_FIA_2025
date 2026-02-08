@@ -113,7 +113,7 @@ class Data_Loader():
         print("-" * 62)
 
         # Controllo Valori Fuori Range (<0 oppure >10)
-        print("\n ANALISI VALORI FUORI RANGE [0 - 10]")
+        print("\n ANALISI VALORI FUORI RANGE [1 - 10]")
         out_of_range_found = False
         current_features = [f for f in self.features_names if f in data_copy.columns]
         for col in current_features:
