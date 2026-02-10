@@ -34,23 +34,25 @@ class ValidationStrategy(ABC):
 
 class HoldoutStrategy(ValidationStrategy):
     def validate(self, X, Y, args):
-        res=holdout(X, Y, test_size=args.test_size, random_state=args.seed)
+        print(f"\n[INFO] Esecuzione Holdout (Test: {args.test_size*100}%, Seed: {args.seed})...")
+        res = holdout(X, Y, test_size=args.test_size, random_state=args.seed)
         return [res] if res else []
 
 class RandomSubsamplingStrategy(ValidationStrategy):
     def validate(self, X, Y, args):
+        print(f"\n[INFO] Esecuzione Random Subsampling ({args.n_iter} iterazioni)...")
         return random_subsampling(X, Y, test_size=args.test_size, n=args.n_iter, random_state=args.seed)
 
 class BootstrapStrategy(ValidationStrategy):
     def validate(self, X, Y, args):
+        print(f"\n[INFO] Esecuzione Bootstrap ({args.k_boot} campionamenti)...")
         return bootstrap(X, Y, k=args.k_boot, random_state=args.seed)
 
-#Implementazione della factory
+# Implementazione della factory
 
 class ValidationFactory:
     @staticmethod
     def get_strategy(method_name):
-        # method_name = method_name.lower()
         match method_name:
             case "holdout":
                 return HoldoutStrategy()
@@ -58,29 +60,39 @@ class ValidationFactory:
                 return RandomSubsamplingStrategy()
             case "bootstrap":
                 return BootstrapStrategy()
+        return None
 
-        # strategy = method_name
-        """
-        strategies={
-            'holdout': HoldoutStrategy(),
-            'random_subsampling': RandomSubsamplingStrategy(),
-            'bootstrap': BootstrapStrategy()
-        }
-        aliases = {
-            'holdout': ['holdout', 'hold'],
-            'random_subsampling': ['random', 'subsampling', 'random_subsampling', 'rs'],
-            'bootstrap': ['bootstrap', 'boot']
-        }
+# ===================== HELPER INPUT =====================
 
-        if method_name in strategies:
-            return method_name, strategies[method_name]
+def get_user_float(prompt, min_val=0.0, max_val=1.0, default=0.2):
+    """Richiede un input float sicuro all'utente"""
+    while True:
+        try:
+            inp = input(f"{prompt} [Default: {default}]: ").strip()
+            if not inp:
+                return default
+            val = float(inp)
+            if min_val < val < max_val:
+                return val
+            else:
+                print(f"Inserire un valore tra {min_val} e {max_val}.")
+        except ValueError:
+            print("Input non valido. Inserire un numero con la virgola (es. 0.3).")
 
-        for canonical_name, names in aliases.items():
-            if method_name in names:
-                return canonical_name, strategies[canonical_name]
-
-        return None,None
-         """
+def get_user_int(prompt, min_val=1, default=5):
+    """Richiede un input int sicuro all'utente"""
+    while True:
+        try:
+            inp = input(f"{prompt} [Default: {default}]: ").strip()
+            if not inp:
+                return default
+            val = int(inp)
+            if val >= min_val:
+                return val
+            else:
+                print(f"Inserire un valore maggiore o uguale a {min_val}.")
+        except ValueError:
+            print("Input non valido. Inserire un numero intero.")
 
 
 # ===================== ARGPARSE =====================
@@ -117,9 +129,7 @@ def main():
 
     print("--- Configurazione ---")
     print(f"File: {args.file}")
-    print(f"Metodo: {args.method}")
-    print(f"K-NN Neighbors: {args.k_nn}")
-    print(f"Seed: {args.seed}")
+    # Nota: I valori stampati qui sono i default iniziali, verranno sovrascritti dal menu
     print("----------------------\n")
 
     classes = "classtype_v1"
@@ -158,49 +168,86 @@ def main():
     if isinstance(Y, pd.DataFrame):
         Y = Y.iloc[:, 0]
 
-    splits = []
+    splits = [] # Inizializzazione lista risultati
+    method_name = "" # Per tenere traccia del metodo scelto
+
     # Ottiene la strategia tramite Factory
-    # method_name, strategy=ValidationFactory.get_strategy(args.method)
     while True:
-        print("MENU PRINCIPALE")
+        print("\n" + "="*30)
+        print(" MENU PRINCIPALE")
+        print("="*30)
         print("1. Esegui Holdout")
         print("2. Esegui Random Subsampling")
         print("3. Esegui Bootstrap")
-        print("4. Non eseguire nulla")
+        print("4. Esci")
 
         try:
-            scelta = int(input("Inserisci la scelta (1-4): "))
+            inp = input("Inserisci la scelta (1-4): ").strip()
+            if not inp: continue
+            scelta = int(inp)
         except ValueError:
             print("Inserire una scelta valida")
             continue
 
+        if scelta == 4:
+            print("Uscita dal programma.")
+            return
+
+        # Configurazione Parametri in base alla scelta
         if scelta == 1:
             method_name = "holdout"
-            strategy = ValidationFactory.get_strategy(method_name)
-            splits = strategy.validate(X, Y, args)
+            # Scelta test set size
+            args.test_size = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
+            # Scelta K del KNN
+            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+            
         elif scelta == 2:
             method_name = "random_subsampling"
-            strategy = ValidationFactory.get_strategy(method_name)
-            splits = strategy.validate(X, Y, args)
+            # Scelta test set size
+            args.test_size = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
+            # Numero iterazioni
+            args.n_iter = get_user_int("Inserisci il numero di iterazioni (split)", default=10)
+            # Scelta K del KNN
+            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+
         elif scelta == 3:
             method_name = "bootstrap"
-            strategy = ValidationFactory.get_strategy(method_name)
-            splits = strategy.validate(X, Y, args)
-        elif scelta == 4:
-            print("Non sto eseguendo nulla")
-            break
-        break
-    """
-    if strategy is None:
-        print (f"Errore: Metodo di validazione {args.method} non supportato.")
-        return
-    """
+            # Numero campionamenti bootstrap
+            args.k_boot = get_user_int("Inserisci il numero di campionamenti Bootstrap", default=10)
+            # Scelta K del KNN
+            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+        
+        else:
+            print("Scelta non valida.")
+            continue
 
-    # splits = strategy.validate(X, Y, args)
+        # Aggiorna il metodo negli args per coerenza (usato poi nel nome file Excel)
+        args.method = method_name
+        
+        # Recupera ed esegue la strategia scelta
+        strategy = ValidationFactory.get_strategy(method_name)
+        splits = strategy.validate(X, Y, args)
+
+        # Se splits è vuoto o None, significa che qualcosa è andato storto nella validazione (es. dataset troppo piccolo)
+        if not splits:
+            print("ATTENZIONE: Nessuno split generato. Torno al menu.")
+            continue
+            
+        break # Esce dal while solo se la strategia è stata eseguita con successo
+
+    # === FASE DI TRAINING E VALIDAZIONE ===
+    
     knn = KNN_Classifier(K = args.k_nn)
     all_metrics = []
+    
+    print(f"\nAvvio Training e Valutazione su {len(splits)} iterazione/i...")
 
     for i, (X_train, X_test, Y_train, Y_test) in enumerate(splits):
+        iterazione_msg = f"ITERAZIONE {i+1} / {len(splits)}"
+        print("\n" + "-"*len(iterazione_msg))
+        print(iterazione_msg)
+        print("-"*(len(iterazione_msg)))
+
         knn.fit(X_train, Y_train)
         y_pred = knn.predict(X_test)
         y_proba = knn.predict_proba(X_test)
@@ -219,7 +266,23 @@ def main():
 
         all_metrics.append(metrics_with_time)
 
-        print(metrics)
+        
+        # === STAMPA FORMATTATA ===
+        print("\n" + "┌" + "─"*35 + "┐")
+        print(f"│ {'METRICA':<22} │ {'VALORE':>8} │")
+        print("├" + "─"*35 + "┤")
+        
+        for k, v in metrics.items():
+            print(f"│ {k:<22} │ {v:>8} │")
+            
+        print("└" + "─"*35 + "┘")
+
+
+
+        input(f"\n>>> Premi [INVIO] per visualizzare i grafici dell'iterazione {i+1}...")
+        
+        # Nota: I plot potrebbero bloccare l'esecuzione finché non vengono chiusi, dipende dal backend matplotlib
+        print("Visualizzazione grafici in corso... (Chiudi la finestra del grafico per continuare)")
         evaluator.plot_confusion_matrix()
         evaluator.plot_roc_curve()
 
@@ -252,40 +315,49 @@ def main():
             f"metrics_{args.method}.xlsx"
         )
 
-        with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
-            df_metrics.to_excel(writer, sheet_name="Risultati", index=False)
-            summary.to_excel(writer, sheet_name="Riassunto")
+        # Try-Except per gestire la mancanza di xlsxwriter
+        try:
+            with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+                df_metrics.to_excel(writer, sheet_name="Risultati", index=False)
+                summary.to_excel(writer, sheet_name="Riassunto")
 
-            workbook = writer.book
-            ws_r = writer.sheets["Risultati"]
-            ws_s = writer.sheets["Riassunto"]
+                workbook = writer.book
+                ws_r = writer.sheets["Risultati"]
+                ws_s = writer.sheets["Riassunto"]
 
-            header_format = workbook.add_format({
-                'bold': True,
-                'align': 'center',
-                'valign': 'middle',
-                'border': 1,
-                'bg_color': '#D9E1F2'
-            })
+                header_format = workbook.add_format({
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'middle',
+                    'border': 1,
+                    'bg_color': '#D9E1F2'
+                })
 
-            cell_format = workbook.add_format({
-                'align': 'center',
-                'border': 1
-            })
+                cell_format = workbook.add_format({
+                    'align': 'center',
+                    'border': 1
+                })
 
-            for col, name in enumerate(df_metrics.columns):
-                ws_r.write(0, col, name, header_format)
-                ws_r.set_column(col, col, 18, cell_format)
+                for col, name in enumerate(df_metrics.columns):
+                    ws_r.write(0, col, name, header_format)
+                    ws_r.set_column(col, col, 18, cell_format)
 
-            ws_s.write(0, 0, "", header_format)
-            ws_s.write(0, 1, "Media", header_format)
-            ws_s.write(0, 2, "Deviazione Std", header_format)
-            ws_s.set_column(0, 0, 22, cell_format)
-            ws_s.set_column(1, 2, 18, cell_format)
+                ws_s.write(0, 0, "", header_format)
+                ws_s.write(0, 1, "Media", header_format)
+                ws_s.write(0, 2, "Deviazione Std", header_format)
+                ws_s.set_column(0, 0, 22, cell_format)
+                ws_s.set_column(1, 2, 18, cell_format)
 
-        print(f"\nMetriche salvate in: {excel_path}")
+            print(f"\n[SUCCESSO] Metriche salvate in: {excel_path}")
+            
+        except ModuleNotFoundError:
+            print("\n[ATTENZIONE] Modulo 'xlsxwriter' non trovato. Salvataggio in formato CSV standard.")
+            csv_path = excel_path.replace('.xlsx', '.csv')
+            df_metrics.to_csv(csv_path, index=False)
+            print(f"Metriche salvate in: {csv_path}")
 
+        except Exception as e:
+            print(f"\n[ERRORE] Impossibile salvare i risultati su file: {e}")
 
 if __name__ == "__main__":
     main()
-
