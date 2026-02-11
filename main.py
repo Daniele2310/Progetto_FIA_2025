@@ -6,6 +6,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 from Data_Preprocessing import Data_Loader
 from Data_Preprocessing import FileConverter
@@ -239,8 +240,13 @@ def main():
     
     knn = KNN_Classifier(K = args.k_nn)
     all_metrics = []
+
+    results_dir = "results"
+    method_dir = os.path.join(results_dir, method_name)
+    os.makedirs(method_dir, exist_ok=True)
     
     print(f"\nAvvio Training e Valutazione su {len(splits)} iterazione/i...")
+
 
     for i, (X_train, X_test, Y_train, Y_test) in enumerate(splits):
         iterazione_msg = f"ITERAZIONE {i+1} / {len(splits)}"
@@ -260,11 +266,54 @@ def main():
 
         metrics = evaluator.get_metrics()
 
-        # === TIMESTAMP PER OGNI ESPERIMENTO ===
-        metrics_with_time = metrics.copy()
-        metrics_with_time["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        row = metrics.copy()
+        row["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        all_metrics.append(metrics_with_time)
+        row["Metodo"] = method_name
+        row["K_nn"] = args.k_nn
+        row["Seed"] = args.seed
+
+        row["Test_size"] = args.test_size if method_name in ["holdout", "random_subsampling"] else np.nan
+        row["N_iter"] = args.n_iter if method_name == "random_subsampling" else np.nan
+        row["K_boot"] = args.k_boot if method_name == "bootstrap" else np.nan
+
+        all_metrics.append(row)
+
+        # ---- CARTELLA ESPERIMENTO PER IMMAGINI ----
+        if method_name == "holdout":
+            exp_dir = method_dir
+        else:
+            exp_dir = os.path.join(method_dir, f"esperimento_{i}")
+            os.makedirs(exp_dir, exist_ok=True)
+
+        cm_path = os.path.join(exp_dir, f"cm_esperimento{i}.png")
+        roc_path = os.path.join(exp_dir, f"roc_esperimento{i}.png")
+
+        # ---- CONFUSION MATRIX ----
+        _old_show = plt.show
+        plt.show = lambda *args, **kwargs: None
+
+        evaluator.plot_confusion_matrix()
+        fig = plt.gcf()
+        fig.canvas.draw()
+        fig.savefig(cm_path, dpi=300, bbox_inches="tight")
+
+        plt.show = _old_show
+        plt.show()
+        plt.close(fig)
+
+        # ---- ROC CURVE ----
+        _old_show = plt.show
+        plt.show = lambda *args, **kwargs: None
+
+        evaluator.plot_roc_curve()
+        fig = plt.gcf()
+        fig.canvas.draw()
+        fig.savefig(roc_path, dpi=300, bbox_inches="tight")
+
+        plt.show = _old_show
+        plt.show()
+        plt.close(fig)
 
         
         # === STAMPA FORMATTATA ===
@@ -276,15 +325,7 @@ def main():
             print(f"│ {k:<22} │ {v:>8} │")
             
         print("└" + "─"*35 + "┘")
-
-
-
-        input(f"\n>>> Premi [INVIO] per visualizzare i grafici dell'iterazione {i+1}...")
-        
-        # Nota: I plot potrebbero bloccare l'esecuzione finché non vengono chiusi, dipende dal backend matplotlib
-        print("Visualizzazione grafici in corso... (Chiudi la finestra del grafico per continuare)")
-        evaluator.plot_confusion_matrix()
-        evaluator.plot_roc_curve()
+        input("\n>>> Premi INVIO per continuare...")
 
     # ===================== EXCEL =====================
 
@@ -298,17 +339,17 @@ def main():
         # numero esperimento
         df_metrics.insert(0, "Esperimento", range(1, len(df_metrics) + 1))
 
-        # ordine colonne: Esperimento, Timestamp, metriche
-        cols = ["Esperimento", "Timestamp"] + [
-            c for c in df_metrics.columns if c not in ["Esperimento", "Timestamp"]
-        ]
+        first_cols = ["Esperimento", "Timestamp", "Metodo", "K_nn", "Seed", "Test_size", "N_iter", "K_boot"]
+        cols = first_cols + [c for c in df_metrics.columns if c not in first_cols]
         df_metrics = df_metrics[cols]
+        exclude = {"Esperimento", "Timestamp", "Metodo", "K_nn", "Seed", "Test_size", "N_iter", "K_boot"}
+        metric_cols = [c for c in df_metrics.columns if c not in exclude]
 
-        # riassunto
         summary = pd.DataFrame({
-            "Media": df_metrics.drop(columns=["Esperimento", "Timestamp"]).mean(),
-            "Deviazione Std": df_metrics.drop(columns=["Esperimento", "Timestamp"]).std()
+            "Media": df_metrics[metric_cols].mean(numeric_only=True),
+            "Deviazione Std": df_metrics[metric_cols].std(numeric_only=True)
         }).round(2)
+
 
         excel_path = os.path.join(
             method_dir,
