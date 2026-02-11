@@ -67,7 +67,7 @@ class MetricsEvaluator:
         }
 
     def plot_confusion_matrix(self):
-        """Plotta la matrice di confusione"""
+        """Plotta la matrice di confusione con 4 quadrati colorati e ben definiti"""
         self.get_metrics()
 
         matrix_data = [
@@ -75,33 +75,55 @@ class MetricsEvaluator:
             [self.fn, self.tp]
         ]
 
-        fig, ax = plt.subplots(figsize=(6, 5))
+        fig, ax = plt.subplots(figsize=(7, 7), facecolor='#f8f9fa')
+        ax.set_facecolor('#f8f9fa')
+
+        # Colore azzurro per la diagonale (corretti), rosso per gli errori
+        color_correct = '#e7f3ff' 
+        color_error = '#fff0f0'   
+        edge_color = '#ced4da'    
 
         for i in range(2):
             for j in range(2):
                 val = matrix_data[i][j]
-                ax.text(j, i, str(val), va='center', ha='center', fontsize=18, fontweight='bold',
-                        bbox=dict(facecolor='white', edgecolor='black', boxstyle='square,pad=2.5'))
+                bg_color = color_correct if i == j else color_error
+                
+                # Usiamo Rectangle: è stabile, non dà errori e crea quadrati perfetti
+                rect = plt.Rectangle((j - 0.45, i - 0.45), 0.9, 0.9,
+                                    facecolor=bg_color, edgecolor=edge_color, 
+                                    linewidth=2, zorder=1)
+                ax.add_patch(rect)
+                
+                # Testo grande e centrato
+                ax.text(j, i, str(val), va='center', ha='center', 
+                        fontsize=28, fontweight='bold', color='#2c3e50', zorder=2)
 
+        # Configurazione Assi
         ax.set_xticks([0, 1])
         ax.set_yticks([0, 1])
+        
+        # Etichette dinamiche basate sul tuo dataset
+        ax.set_xticklabels([f'PREDETTO\n{self.neg_label}', f'PREDETTO\n{self.pos_label}'], 
+                           fontsize=11, fontweight='bold', color='#495057')
+        ax.set_yticklabels([f'REALE {self.neg_label}', f'REALE {self.pos_label}'], 
+                           fontsize=11, fontweight='bold', color='#495057')
 
-        # Le etichette degli assi ora usano self.pos_label e self.neg_label
-        # per adattarsi a qualsiasi scelta (Target 4 o Target 2).
-        ax.set_xticklabels([f'Pred {self.neg_label}', f'Pred {self.pos_label}'], fontsize=11)
-        ax.set_yticklabels([f'Reale {self.neg_label}', f'Reale {self.pos_label}'], fontsize=11)
-
-        ax.set_ylim(1.5, -0.5)
-        ax.set_xlim(-0.5, 1.5)
-
-        plt.title('Matrice di Confusione', fontsize=14, pad=20)
-        plt.ylabel('Classe Effettiva', fontsize=12)
-        plt.xlabel('Classe Predetta', fontsize=12)
-
-        ax.grid(False)
+        # Estetica professionale
+        ax.xaxis.set_label_position('top')
+        ax.xaxis.tick_top()
+        
+        plt.title('CONFUSION MATRIX', fontsize=16, fontweight='bold', pad=50, color='#1a1a1a')
+        
+        # Pulizia bordi
         for spine in ax.spines.values():
             spine.set_visible(False)
-        ax.tick_params(which='both', length=0)
+            
+        ax.tick_params(axis='both', which='both', length=0, pad=20)
+        
+        # Limiti per centrare perfettamente i 4 quadrati
+        ax.set_xlim(-0.6, 1.6)
+        ax.set_ylim(1.6, -0.6)
+        ax.grid(False)
 
         plt.tight_layout()
         plt.show()
