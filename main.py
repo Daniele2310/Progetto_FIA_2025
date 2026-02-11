@@ -15,7 +15,7 @@ from random_subsampling import random_subsampling
 from Bootstrap import bootstrap
 from Model_Development import KNN_Classifier
 from MetricsEvaluation import MetricsEvaluator
-
+from K_Optimal import KNN_Optimal
 
 '''
 1. file converter
@@ -96,6 +96,63 @@ def get_user_int(prompt, min_val=1, default=5):
             print("Input non valido. Inserire un numero intero.")
 
 
+# helper per calcolare k_optimal
+def compute_k_optimal(method_name, X, Y, params, splits=None, k_max=30):
+    """
+    Calcola il K consigliato (k_optimal) in base al metodo scelto.
+    Se splits è None e il metodo ne ha bisogno (random/bootstrap), li genera internamente
+    SOLO per stimare il K (non cambia il flusso principale).
+    """
+    # più veloce: solo K dispari
+    k_range = range(1, k_max + 1, 2)
+
+    # Se serve e non ho splits, li genero "al volo" SOLO per il consiglio
+    if method_name == "random_subsampling" and splits is None:
+        splits = random_subsampling(
+            X, Y,
+            test_size=params["test_size"],
+            n=params["n_iter"],
+            random_state=params["seed"]
+        )
+
+    if method_name == "bootstrap" and splits is None:
+        splits = bootstrap(
+            X, Y,
+            k=params["k_boot"],
+            random_state=params["seed"]
+        )
+
+    opt = KNN_Optimal(X, Y, k_range, splits)
+
+    if method_name == "holdout":
+        best_k, best_acc = opt.K_Holdout(
+            test_size=params["test_size"],
+            random_state=params["seed"]
+        )
+        return best_k, best_acc
+
+    if method_name == "random_subsampling":
+        best_k, best_acc = opt.K_random_subsampling(
+            test_size=params["test_size"],
+            splits=splits,
+            random_state=params["seed"]
+        )
+        return best_k, best_acc
+
+    if method_name == "bootstrap":
+        val_size = 0.30
+        best_k, best_acc = opt.K_bootstrap(
+            n_boot=params["k_boot"],
+            random_state=params["seed"],
+            splits=splits,
+            test_size=val_size
+        )
+        return best_k, best_acc
+
+    return params["k_nn"], None
+
+
+
 # ===================== MAIN =====================
 
 def main():
@@ -149,10 +206,11 @@ def main():
     method_name = "" # Per tenere traccia del metodo scelto
 
     # Ottiene la strategia tramite Factory
+    # Ottiene la strategia tramite Factory
     while True:
-        print("\n" + "="*30)
+        print("\n" + "=" * 30)
         print(" MENU PRINCIPALE")
-        print("="*30)
+        print("=" * 30)
         print("1. Esegui Holdout")
         print("2. Esegui Random Subsampling")
         print("3. Esegui Bootstrap")
@@ -160,7 +218,8 @@ def main():
 
         try:
             inp = input("Inserisci la scelta (1-4): ").strip()
-            if not inp: continue
+            if not inp:
+                continue
             scelta = int(inp)
         except ValueError:
             print("Inserire una scelta valida")
@@ -174,40 +233,70 @@ def main():
         if scelta == 1:
             method_name = "holdout"
             # Scelta test set size
-            params['test_size'] = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
-            # Scelta K del KNN
-            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
-            
+            params['test_size'] = get_user_float(
+                "Inserisci la dimensione del Test Set (es. 0.3 per 30%)",
+                default=0.3
+            )
+
+            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            k_opt, acc_opt = compute_k_optimal("holdout", X, Y, params)
+            acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
+            params['k_nn'] = get_user_int(
+                f"Inserisci il valore di K per il K-NN (consigliato: {k_opt}{acc_txt})",
+                default=k_opt
+            )
+
         elif scelta == 2:
             method_name = "random_subsampling"
             # Scelta test set size
-            params['test_size'] = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
+            params['test_size'] = get_user_float(
+                "Inserisci la dimensione del Test Set (es. 0.3 per 30%)",
+                default=0.3
+            )
             # Numero iterazioni
-            params['n_iter'] = get_user_int("Inserisci il numero di iterazioni (split)", default=10)
-            # Scelta K del KNN
-            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+            params['n_iter'] = get_user_int(
+                "Inserisci il numero di iterazioni (split)",
+                default=10
+            )
+
+            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            k_opt, acc_opt = compute_k_optimal("random_subsampling", X, Y, params, splits=None)
+            acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
+            params['k_nn'] = get_user_int(
+                f"Inserisci il valore di K per il K-NN (consigliato: {k_opt}{acc_txt})",
+                default=k_opt
+            )
 
         elif scelta == 3:
             method_name = "bootstrap"
             # Numero campionamenti bootstrap
-            params['k_boot'] = get_user_int("Inserisci il numero di campionamenti Bootstrap", default=10)
-            # Scelta K del KNN
-            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
-        
+            params['k_boot'] = get_user_int(
+                "Inserisci il numero di campionamenti Bootstrap",
+                default=10
+            )
+
+            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            k_opt, acc_opt = compute_k_optimal("bootstrap", X, Y, params, splits=None)
+            acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
+            params['k_nn'] = get_user_int(
+                f"Inserisci il valore di K per il K-NN (consigliato: {k_opt}{acc_txt})",
+                default=k_opt
+            )
+
         else:
             print("Scelta non valida.")
             continue
 
-        # Recupera ed esegue la strategia scelta
+        # Recupera ed esegue la strategia scelta (UGUALE A PRIMA)
         strategy = ValidationFactory.get_strategy(method_name)
         splits = strategy.validate(X, Y, params)
 
-        # Se splits è vuoto o None, significa che qualcosa è andato storto nella validazione (es. dataset troppo piccolo)
+        # Se splits è vuoto o None, significa che qualcosa è andato storto nella validazione
         if not splits:
             print("ATTENZIONE: Nessuno split generato. Torno al menu.")
             continue
-            
-        break # Esce dal while solo se la strategia è stata eseguita con successo
+
+        break  # Esce dal while solo se la strategia è stata eseguita con successo
 
     # === FASE DI TRAINING E VALIDAZIONE ===
     
