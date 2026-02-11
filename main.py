@@ -1,4 +1,4 @@
-import argparse
+
 from unittest import case
 
 import pandas as pd
@@ -30,24 +30,24 @@ from MetricsEvaluation import MetricsEvaluator
 class ValidationStrategy(ABC):
     """Intefaccia comune per i metodi di validazione"""
     @abstractmethod
-    def validate(self, X, Y, args):
+    def validate(self, X, Y, params):
         pass
 
 class HoldoutStrategy(ValidationStrategy):
-    def validate(self, X, Y, args):
-        print(f"\n[INFO] Esecuzione Holdout (Test: {args.test_size*100}%, Seed: {args.seed})...")
-        res = holdout(X, Y, test_size=args.test_size, random_state=args.seed)
+    def validate(self, X, Y, params):
+        print(f"\n[INFO] Esecuzione Holdout (Test: {params['test_size']*100}%, Seed: {params['seed']})...")
+        res = holdout(X, Y, test_size=params['test_size'], random_state=params['seed'])
         return [res] if res else []
 
 class RandomSubsamplingStrategy(ValidationStrategy):
-    def validate(self, X, Y, args):
-        print(f"\n[INFO] Esecuzione Random Subsampling ({args.n_iter} iterazioni)...")
-        return random_subsampling(X, Y, test_size=args.test_size, n=args.n_iter, random_state=args.seed)
+    def validate(self, X, Y, params):
+        print(f"\n[INFO] Esecuzione Random Subsampling ({params['n_iter']} iterazioni)...")
+        return random_subsampling(X, Y, test_size=params['test_size'], n=params['n_iter'], random_state=params['seed'])
 
 class BootstrapStrategy(ValidationStrategy):
-    def validate(self, X, Y, args):
-        print(f"\n[INFO] Esecuzione Bootstrap ({args.k_boot} campionamenti)...")
-        return bootstrap(X, Y, k=args.k_boot, random_state=args.seed)
+    def validate(self, X, Y, params):
+        print(f"\n[INFO] Esecuzione Bootstrap ({params['k_boot']} campionamenti)...")
+        return bootstrap(X, Y, k=params['k_boot'], random_state=params['seed'])
 
 # Implementazione della factory
 
@@ -96,43 +96,19 @@ def get_user_int(prompt, min_val=1, default=5):
             print("Input non valido. Inserire un numero intero.")
 
 
-# ===================== ARGPARSE =====================
-
-def parse_args():
-    parser = argparse.ArgumentParser(description = "Classificazione con KNN")
-
-    parser.add_argument("--file", type = str,  default = "Dataset_Tumori.csv" )
-
-    parser.add_argument("--method", type = str, default="holdout",
-                        help = "Metodo di validazione: 'holdout', 'random_subsampling', 'bootstrap'")
-
-    parser.add_argument("--test_size", type = float, default = 0.2, help = "Percentuale del test set usato per holdout e subsampling")
-
-    parser.add_argument('--n_iter', type = int, default = 10,
-                        help = "Numero di ripetizioni per Random Subsampling (default: 10)")
-
-    parser.add_argument('--k_nn', type=int, default = 8,
-                        help="Valore di k per l'algoritmo KNN (default: 8)")
-
-    parser.add_argument('--k_boot', type=int, default = 10,
-                        help="Numero di campionamenti per Bootstrap (default: 10)")
-
-    parser.add_argument('--seed', type=int, default=42,
-                        help="Seed casuale per la riproducibilità")
-
-    return parser.parse_args()
-
-
 # ===================== MAIN =====================
 
 def main():
-    args = parse_args()
-
-    print("--- Configurazione ---")
-    print(f"File: {args.file}")
-    # Nota: I valori stampati qui sono i default iniziali, verranno sovrascritti dal menu
-    print("----------------------\n")
-
+    #Parametri iniziali di default
+    params = {
+        'file': "Dataset_Tumori.csv",
+        'seed': 42,
+        'k_nn': 5,
+        'test_size': 0.3,
+        'n_iter': 10,
+        'k_boot': 10,
+        'method': ""
+    }
     classes = "classtype_v1"
 
     selected_features = [
@@ -147,7 +123,7 @@ def main():
         'Mitoses'
     ]
 
-    loader = Data_Loader(args.file, selected_features, classes)
+    loader = Data_Loader(params['file'], selected_features, classes)
     df = loader.load_dataset()
 
     if df is None:
@@ -198,36 +174,33 @@ def main():
         if scelta == 1:
             method_name = "holdout"
             # Scelta test set size
-            args.test_size = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
+            params['test_size'] = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
             # Scelta K del KNN
-            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
             
         elif scelta == 2:
             method_name = "random_subsampling"
             # Scelta test set size
-            args.test_size = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
+            params['test_size'] = get_user_float("Inserisci la dimensione del Test Set (es. 0.3 per 30%)", default=0.3)
             # Numero iterazioni
-            args.n_iter = get_user_int("Inserisci il numero di iterazioni (split)", default=10)
+            params['n_iter'] = get_user_int("Inserisci il numero di iterazioni (split)", default=10)
             # Scelta K del KNN
-            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
 
         elif scelta == 3:
             method_name = "bootstrap"
             # Numero campionamenti bootstrap
-            args.k_boot = get_user_int("Inserisci il numero di campionamenti Bootstrap", default=10)
+            params['k_boot'] = get_user_int("Inserisci il numero di campionamenti Bootstrap", default=10)
             # Scelta K del KNN
-            args.k_nn = get_user_int("Inserisci il valore di K per il K-NN", default=5)
+            params['k_nn'] = get_user_int("Inserisci il valore di K per il K-NN", default=5)
         
         else:
             print("Scelta non valida.")
             continue
 
-        # Aggiorna il metodo negli args per coerenza (usato poi nel nome file Excel)
-        args.method = method_name
-        
         # Recupera ed esegue la strategia scelta
         strategy = ValidationFactory.get_strategy(method_name)
-        splits = strategy.validate(X, Y, args)
+        splits = strategy.validate(X, Y, params)
 
         # Se splits è vuoto o None, significa che qualcosa è andato storto nella validazione (es. dataset troppo piccolo)
         if not splits:
@@ -238,7 +211,7 @@ def main():
 
     # === FASE DI TRAINING E VALIDAZIONE ===
     
-    knn = KNN_Classifier(K = args.k_nn)
+    knn = KNN_Classifier(K = params['k_nn'])
     all_metrics = []
 
     results_dir = "results"
@@ -288,12 +261,12 @@ def main():
         row["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         row["Metodo"] = method_name
-        row["K_nn"] = args.k_nn
-        row["Seed"] = args.seed
+        row["K_nn"] = params['k_nn']
+        row["Seed"] = params['seed']
 
-        row["Test_size"] = args.test_size if method_name in ["holdout", "random_subsampling"] else np.nan
-        row["N_iter"] = args.n_iter if method_name == "random_subsampling" else np.nan
-        row["K_boot"] = args.k_boot if method_name == "bootstrap" else np.nan
+        row["Test_size"] = params['test_size'] if method_name in ["holdout", "random_subsampling"] else np.nan
+        row["N_iter"] = params['n_iter'] if method_name == "random_subsampling" else np.nan
+        row["K_boot"] = params['k_boot'] if method_name == "bootstrap" else np.nan
 
         all_metrics.append(row)
 
@@ -360,7 +333,7 @@ def main():
         }).round(2)
 
         # Excel dentro cartella esperimento/run
-        excel_path = os.path.join(exp_dir, f"metrics_{args.method}.xlsx")
+        excel_path = os.path.join(exp_dir, f"metrics_{method_name}.xlsx")
 
         try:
             with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
