@@ -135,5 +135,3 @@ class KNN_Optimal:
         self.results['Bootstrap'] = {'K': best_k, 'Accuracy': best_acc}
         return best_k, best_acc
 
-
-
