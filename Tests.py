@@ -159,6 +159,9 @@ class Test_Bootstrap(unittest.TestCase):
         for X_train, _, Y_train, _ in splits:
             self.assertEqual(len(X_train), len(self.X))
             self.assertEqual(len(Y_train), len(self.Y))
+    
+    
+    
 
 
 
@@ -409,6 +412,12 @@ class Test_Metrics_Evaluation(unittest.TestCase):
         metrics = self.evaluator.get_metrics()
         self.assertEqual(metrics["Specificity"], 100.0)
 
+    def test_divisione_per_zero_metriche(self):
+        """Verifica che l'evaluator gestisca array vuoti senza crashare."""
+        empty_eval = MetricsEvaluator(np.array([]), np.array([]))
+        metrics = empty_eval.get_metrics()
+        self.assertEqual(metrics["Accuracy"], 0.0) # Dovrebbe restituire 0 invece di ZeroDivisionError
+
     @patch('matplotlib.pyplot.show')
     def test_auc_ranking_perfetto(self, mock_show):
         """
@@ -423,6 +432,42 @@ class Test_Metrics_Evaluation(unittest.TestCase):
         # Verifica che il grafico non sia apparso a video e l'AUC sia corretta
         self.assertTrue(mock_show.called)
         self.assertEqual(auc, 1.0)
+
+class Test_KNN(unittest.TestCase):
+    def setUp(self):
+        self.knn = KNN_Classifier(K=3)
+
+    def test_knn_fit_input_unidimensionale(self):
+        """Verifica che il KNN gestisca correttamente Y_train se passato come colonna singola."""
+        X_train = np.array([[1, 2], [3, 4], [5, 6]])
+        Y_train = np.array([[2], [4], [2]]) # Formato (3, 1) invece di (3,)
+        self.knn.fit(X_train, Y_train)
+        self.assertEqual(self.knn.Y_train.ndim, 1) # Dovrebbe essere flatten() nel fit
+
+    def test_knn_predict_singolo_campione(self):
+        """Verifica che predict funzioni anche passando un singolo vettore invece di una matrice."""
+        X_train = np.array([[1, 1], [10, 10]])
+        Y_train = np.array([2, 4])
+        self.knn.K = 1
+        self.knn.fit(X_train, Y_train)
+        pred = self.knn.predict(np.array([1.1, 1.1])) # Input shape (2,)
+        self.assertEqual(len(pred), 1)
+
+    def test_knn_pareggio_voti(self):
+        """Verifica il comportamento del KNN in caso di pareggio (K=2)."""
+        knn = KNN_Classifier(K=2)
+        # Due punti di training: uno classe 2 e uno classe 4
+        X_train = np.array([[1, 1], [2, 2]])
+        Y_train = np.array([2, 4])
+        knn.fit(X_train, Y_train)
+        
+        # Punto di test esattamente in mezzo
+        X_test = np.array([[1.5, 1.5]])
+        pred = knn.predict(X_test)
+        self.assertIn(pred[0], [2, 4]) # La scelta deve essere tra le due classi
+
+
+
 
 
 
