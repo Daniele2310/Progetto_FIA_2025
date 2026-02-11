@@ -104,7 +104,7 @@ def parse_args():
     parser.add_argument("--file", type = str,  default = "Dataset_Tumori.csv" )
 
     parser.add_argument("--method", type = str, default="holdout",
-                        help = "Metodo di validazione: 'holdout', 'subsampling', 'bootstrap'")
+                        help = "Metodo di validazione: 'holdout', 'random_subsampling', 'bootstrap'")
 
     parser.add_argument("--test_size", type = float, default = 0.2, help = "Percentuale del test set usato per holdout e subsampling")
 
@@ -244,7 +244,25 @@ def main():
     results_dir = "results"
     method_dir = os.path.join(results_dir, method_name)
     os.makedirs(method_dir, exist_ok=True)
-    
+
+    existing = [
+        d for d in os.listdir(method_dir)
+        if os.path.isdir(os.path.join(method_dir, d)) and d.startswith("esperimento_")
+    ]
+
+    nums = []
+    for d in existing:
+        try:
+            nums.append(int(d.split("_")[1]))
+        except:
+            pass
+
+    exp_num = (max(nums) + 1) if nums else 1
+    exp_dir = os.path.join(method_dir, f"esperimento_{exp_num}")
+    os.makedirs(exp_dir, exist_ok=True)
+
+    print(f"\n[INFO] Cartella esperimento: {exp_dir}")
+
     print(f"\nAvvio Training e Valutazione su {len(splits)} iterazione/i...")
 
 
@@ -279,17 +297,12 @@ def main():
 
         all_metrics.append(row)
 
-        # ---- CARTELLA ESPERIMENTO PER IMMAGINI ----
-        if method_name == "holdout":
-            exp_dir = method_dir
-        else:
-            exp_dir = os.path.join(method_dir, f"esperimento_{i}")
-            os.makedirs(exp_dir, exist_ok=True)
+        iter_dir = os.path.join(exp_dir, f"iter_{i}")
+        os.makedirs(iter_dir, exist_ok=True)
 
-        cm_path = os.path.join(exp_dir, f"cm_esperimento{i}.png")
-        roc_path = os.path.join(exp_dir, f"roc_esperimento{i}.png")
+        cm_path = os.path.join(iter_dir, "cm.png")
+        roc_path = os.path.join(iter_dir, "roc.png")
 
-        # ---- CONFUSION MATRIX ----
         _old_show = plt.show
         plt.show = lambda *args, **kwargs: None
 
@@ -302,7 +315,6 @@ def main():
         plt.show()
         plt.close(fig)
 
-        # ---- ROC CURVE ----
         _old_show = plt.show
         plt.show = lambda *args, **kwargs: None
 
@@ -315,33 +327,30 @@ def main():
         plt.show()
         plt.close(fig)
 
-        
         # === STAMPA FORMATTATA ===
-        print("\n" + "┌" + "─"*35 + "┐")
+        print("\n" + "┌" + "─" * 35 + "┐")
         print(f"│ {'METRICA':<22} │ {'VALORE':>8} │")
-        print("├" + "─"*35 + "┤")
-        
+        print("├" + "─" * 35 + "┤")
+
         for k, v in metrics.items():
             print(f"│ {k:<22} │ {v:>8} │")
-            
-        print("└" + "─"*35 + "┘")
+
+        print("└" + "─" * 35 + "┘")
         input("\n>>> Premi INVIO per continuare...")
 
     # ===================== EXCEL =====================
-
     if all_metrics:
-        results_dir = "results"
-        method_dir = os.path.join(results_dir, method_name)
-        os.makedirs(method_dir, exist_ok=True)
-
         df_metrics = pd.DataFrame(all_metrics).round(2)
 
-        # numero esperimento
+        # numero iterazione (tu lo chiami "Esperimento" ma in realtà è iterazione: ok se ti va bene)
         df_metrics.insert(0, "Esperimento", range(1, len(df_metrics) + 1))
 
+        # ordine colonne: info + parametri + metriche
         first_cols = ["Esperimento", "Timestamp", "Metodo", "K_nn", "Seed", "Test_size", "N_iter", "K_boot"]
         cols = first_cols + [c for c in df_metrics.columns if c not in first_cols]
         df_metrics = df_metrics[cols]
+
+        # riassunto solo metriche
         exclude = {"Esperimento", "Timestamp", "Metodo", "K_nn", "Seed", "Test_size", "N_iter", "K_boot"}
         metric_cols = [c for c in df_metrics.columns if c not in exclude]
 
@@ -350,13 +359,9 @@ def main():
             "Deviazione Std": df_metrics[metric_cols].std(numeric_only=True)
         }).round(2)
 
+        # Excel dentro cartella esperimento/run
+        excel_path = os.path.join(exp_dir, f"metrics_{args.method}.xlsx")
 
-        excel_path = os.path.join(
-            method_dir,
-            f"metrics_{args.method}.xlsx"
-        )
-
-        # Try-Except per gestire la mancanza di xlsxwriter
         try:
             with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
                 df_metrics.to_excel(writer, sheet_name="Risultati", index=False)
@@ -390,15 +395,16 @@ def main():
                 ws_s.set_column(1, 2, 18, cell_format)
 
             print(f"\n[SUCCESSO] Metriche salvate in: {excel_path}")
-            
+
         except ModuleNotFoundError:
             print("\n[ATTENZIONE] Modulo 'xlsxwriter' non trovato. Salvataggio in formato CSV standard.")
-            csv_path = excel_path.replace('.xlsx', '.csv')
+            csv_path = excel_path.replace(".xlsx", ".csv")
             df_metrics.to_csv(csv_path, index=False)
             print(f"Metriche salvate in: {csv_path}")
 
         except Exception as e:
             print(f"\n[ERRORE] Impossibile salvare i risultati su file: {e}")
+
 
 if __name__ == "__main__":
     main()
