@@ -65,20 +65,13 @@ Numero di vicini da considerare per il classificatore k-NN.
 - Area Under the Curve (AUC)
 
 ## Come eseguire il codice
-Il programma viene gestito tramite lo script principale `main.py`. È possibile configurare l'esecuzione utilizzando i seguenti argomenti da riga di comando per personalizzare la pipeline di classificazione:
+Il programma viene gestito tramite lo script principale `main.py`. È possibile configurare l'esecuzione utilizzando il menù interattivo per scegliere i metodi di validazione e gli iperparametri della classificazione:
 
 * **Comando base**:
     ```bash
-    python main.py --method <metodo> --k_nn <valore_k>
+    python main.py
     ```
 
-* **Esempi di utilizzo**:
-    * **Holdout**: Per eseguire una singola divisione (es. 20% test set) con k=5:
-        `python main.py --method holdout --test_size 0.2 --k_nn 5`
-    * **Random Subsampling**: Per eseguire 10 iterazioni (K=10) con k=7:
-        `python main.py --method random_subsampling --n_iter 10 --k_nn 7`
-    * **Bootstrap**: Per eseguire la validazione tramite 10 campionamenti bootstrap con k=3:
-        `python main.py --method bootstrap --k_boot 10 --k_nn 3`
 
 ## Visualizzazione e Interpretazione dei Risultati
 Al termine dell'elaborazione, il sistema fornisce diversi strumenti per valutare l'efficacia del modello:
