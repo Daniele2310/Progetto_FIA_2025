@@ -66,7 +66,6 @@ class ValidationFactory:
 # ===================== HELPER INPUT =====================
 
 def get_user_float(prompt, min_val=0.0, max_val=1.0, default=0.2):
-    """Richiede un input float sicuro all'utente"""
     while True:
         try:
             inp = input(f"{prompt} [Default: {default}]: ").strip()
@@ -81,7 +80,6 @@ def get_user_float(prompt, min_val=0.0, max_val=1.0, default=0.2):
             print("Input non valido. Inserire un numero con la virgola (es. 0.3).")
 
 def get_user_int(prompt, min_val=1, default=5):
-    """Richiede un input int sicuro all'utente"""
     while True:
         try:
             inp = input(f"{prompt} [Default: {default}]: ").strip()
@@ -98,15 +96,9 @@ def get_user_int(prompt, min_val=1, default=5):
 
 # helper per calcolare k_optimal
 def compute_k_optimal(method_name, X, Y, params, splits=None, k_max=30):
-    """
-    Calcola il K consigliato (k_optimal) in base al metodo scelto.
-    Se splits è None e il metodo ne ha bisogno (random/bootstrap), li genera internamente
-    SOLO per stimare il K (non cambia il flusso principale).
-    """
-    # più veloce: solo K dispari
+
     k_range = range(1, k_max + 1, 2)
 
-    # Se serve e non ho splits, li genero "al volo" SOLO per il consiglio
     if method_name == "random_subsampling" and splits is None:
         splits = random_subsampling(
             X, Y,
@@ -140,12 +132,11 @@ def compute_k_optimal(method_name, X, Y, params, splits=None, k_max=30):
         return best_k, best_acc
 
     if method_name == "bootstrap":
-        val_size = 0.30
         best_k, best_acc = opt.K_bootstrap(
             n_boot=params["k_boot"],
             random_state=params["seed"],
             splits=splits,
-            test_size=val_size
+            test_size=params["test_size"]
         )
         return best_k, best_acc
 
@@ -205,7 +196,7 @@ def main():
     splits = [] # Inizializzazione lista risultati
     method_name = "" # Per tenere traccia del metodo scelto
 
-    # Ottiene la strategia tramite Factory
+
     # Ottiene la strategia tramite Factory
     while True:
         print("\n" + "=" * 30)
@@ -229,7 +220,7 @@ def main():
             print("Uscita dal programma.")
             return
 
-        # Configurazione Parametri in base alla scelta
+
         if scelta == 1:
             method_name = "holdout"
             # Scelta test set size
@@ -238,7 +229,7 @@ def main():
                 default=0.3
             )
 
-            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            # --- K ottimale ---
             k_opt, acc_opt = compute_k_optimal("holdout", X, Y, params)
             acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
             params['k_nn'] = get_user_int(
@@ -259,7 +250,7 @@ def main():
                 default=10
             )
 
-            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            # --- K ottimale ---
             k_opt, acc_opt = compute_k_optimal("random_subsampling", X, Y, params, splits=None)
             acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
             params['k_nn'] = get_user_int(
@@ -269,13 +260,12 @@ def main():
 
         elif scelta == 3:
             method_name = "bootstrap"
-            # Numero campionamenti bootstrap
             params['k_boot'] = get_user_int(
                 "Inserisci il numero di campionamenti Bootstrap",
                 default=10
             )
 
-            # --- SOLO AGGIUNTA: consiglio K ottimale ---
+            # --- K ottimale ---
             k_opt, acc_opt = compute_k_optimal("bootstrap", X, Y, params, splits=None)
             acc_txt = f", acc≈{acc_opt:.3f}" if acc_opt is not None else ""
             params['k_nn'] = get_user_int(
@@ -287,19 +277,17 @@ def main():
             print("Scelta non valida.")
             continue
 
-        # Recupera ed esegue la strategia scelta (UGUALE A PRIMA)
         strategy = ValidationFactory.get_strategy(method_name)
         splits = strategy.validate(X, Y, params)
 
-        # Se splits è vuoto o None, significa che qualcosa è andato storto nella validazione
         if not splits:
             print("ATTENZIONE: Nessuno split generato. Torno al menu.")
             continue
 
-        break  # Esce dal while solo se la strategia è stata eseguita con successo
+        break
+
 
     # === FASE DI TRAINING E VALIDAZIONE ===
-    
     knn = KNN_Classifier(K = params['k_nn'])
     all_metrics = []
 
